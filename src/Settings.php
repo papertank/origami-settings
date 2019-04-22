@@ -5,7 +5,6 @@ namespace Origami\Settings;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Database\Eloquent\Model;
-use Origami\Settings\SettingsException;
 
 class Settings
 {
@@ -16,7 +15,7 @@ class Settings
     public function __construct($settings, Model $resource, $identifier = null)
     {
         $this->resource = $resource;
-        $this->identifier = $this->identifier ?: 'settings';
+        $this->identifier = $identifier ?: 'settings';
         $this->init($settings);
     }
 
@@ -57,8 +56,8 @@ class Settings
 
     public function persist()
     {
-        $this->user->settings = $this->settings;
-        $this->user->save();
+        $this->resource->settings = $this->settings;
+        $this->resource->save();
 
         return $this;
     }
@@ -93,7 +92,7 @@ class Settings
 
     protected function castSetting($key, $value)
     {
-        $type = $this->config($key . '.type');
+        $type = $this->config($key.'.type');
 
         if (is_null($type) || is_null($value)) {
             return $value;
@@ -102,19 +101,20 @@ class Settings
         switch ($type) {
             case 'int':
             case 'integer':
-                return (int)$value;
+                return (int) $value;
             case 'real':
             case 'float':
             case 'double':
-                return (float)$value;
+                return (float) $value;
             case 'string':
-                return (string)$value;
+                return (string) $value;
             case 'bool':
             case 'boolean':
-                if (is_string($value) && ! is_numeric($value)) {
+                if (is_string($value) && !is_numeric($value)) {
                     return strtolower($value) == 'true';
                 }
-                return (bool)$value;
+
+                return (bool) $value;
             default:
                 return $value;
         }
@@ -126,7 +126,7 @@ class Settings
                     $this->resource->getSettingsConfig($this->identifier) :
                     [];
 
-        if (! is_null($key)) {
+        if (!is_null($key)) {
             return Arr::get($config, $key);
         }
 
@@ -136,6 +136,7 @@ class Settings
     protected function defaults()
     {
         $settings = new Collection($this->config());
+
         return $settings->filter(function ($setting) {
             return array_key_exists('default', $setting);
         })->map(function ($setting) {
