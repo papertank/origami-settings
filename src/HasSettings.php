@@ -8,13 +8,17 @@ trait HasSettings
 
     abstract public function save();
 
-    abstract public function getAttributeValue();
-
-    abstract public function setAttribute();
-
     public function getSettingsAttribute()
     {
-        if ($settings = $this->getAttributeValue('settings')) {
+        if (method_exists($this, 'getAttributeFromArray')) {
+            $settings = $this->getAttributeFromArray('settings');
+        } elseif (method_exists($this, 'getSettings')) {
+            $settings = $this->getSettings();
+        } else {
+            throw new SettingsException(get_class($this).' should provide getSettings method');
+        }
+
+        if ($settings) {
             return is_array($settings) ? $settings : json_decode($settings, true);
         }
 
@@ -23,10 +27,11 @@ trait HasSettings
 
     public function setSettingsAttribute($settings)
     {
-        $this->setAttribute(
-            'settings',
-            collect($this->settings()->merge($settings, false))->toJson()
-        );
+        if ($settings) {
+            $settings = is_array($settings) ? $settings : json_decode($settings, true);
+        }
+
+        $this->attributes['settings'] = collect($this->settings()->merge($settings, false))->toJson();
     }
 
     public function settings()

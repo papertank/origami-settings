@@ -21,7 +21,7 @@ class Settings
     {
         $fallback = is_null($fallback) ? $this->config($key.'.default') : $fallback;
 
-        return Arr::get($this->settings, $key);
+        return Arr::get($this->settings, $key, $fallback);
     }
 
     public function set($key, $value)
