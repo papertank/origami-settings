@@ -2,27 +2,48 @@
 
 namespace Origami\Settings;
 
-use Origami\Settings\Settings;
-
 trait HasSettings
 {
     protected $settingsInstance;
-    protected $settingsKey = 'settings';
 
-    public function settings($key = null)
+    abstract public function save();
+
+    abstract public function getAttributeValue();
+
+    abstract public function setAttribute();
+
+    public function getSettingsAttribute()
     {
-        if (is_null($this->settingsInstance)) {
-            $this->settingsInstance = new Settings($this->getAttributeValue($this->settingsKey), $this, $this->settingsKey);
+        if ($settings = $this->getAttributeValue('settings')) {
+            return is_array($settings) ? $settings : json_decode($settings, true);
         }
 
-        if (! is_null($key)) {
-            return $this->settingsInstance->get($key);
+        return [];
+    }
+
+    public function setSettingsAttribute($settings)
+    {
+        $this->setAttribute(
+            'settings',
+            collect($this->settings()->merge($settings, false))->toJson()
+        );
+    }
+
+    public function settings()
+    {
+        if (is_null($this->settingsInstance)) {
+            $this->settingsInstance = new Settings($this->getSettingsAttribute(), $this);
         }
 
         return $this->settingsInstance;
     }
 
-    public function getSettingsConfig($identifier = null)
+    public function setting($key, $fallback = null)
+    {
+        return $this->settings()->get($key, $fallback);
+    }
+
+    public function getSettingsConfig()
     {
         return [];
     }

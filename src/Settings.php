@@ -4,42 +4,29 @@ namespace Origami\Settings;
 
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
-use Illuminate\Database\Eloquent\Model;
 
 class Settings
 {
-    protected $resource;
-    protected $identifier;
+    protected $model;
     protected $settings = [];
+    protected $config;
 
-    public function __construct($settings, Model $resource, $identifier = null)
+    public function __construct(array $settings, $model)
     {
-        $this->resource = $resource;
-        $this->identifier = $identifier ?: 'settings';
-        $this->init($settings);
+        $this->settings = $settings;
+        $this->model = $model;
     }
 
-    protected function init($settings)
+    public function get($key, $fallback = null)
     {
-        $this->settings = array_merge($this->defaults(), (array) $settings);
-    }
+        $fallback = is_null($fallback) ? $this->config($key.'.default') : $fallback;
 
-    public function get($key)
-    {
         return Arr::get($this->settings, $key);
     }
 
     public function set($key, $value)
     {
         $this->settings[$key] = $this->castSetting($key, $value);
-    }
-
-    public function merge(array $settings)
-    {
-        $this->settings = array_merge(
-            $this->settings,
-            $this->filterAndCast($settings)
-        );
 
         return $this;
     }
@@ -54,10 +41,24 @@ class Settings
         return $this->settings;
     }
 
+    public function merge(array $settings, $persist = true)
+    {
+        $this->settings = array_merge(
+            $this->settings,
+            $this->filterAndCast($settings)
+        );
+
+        if ($persist) {
+            $this->persist();
+        }
+
+        return $this->settings;
+    }
+
     public function persist()
     {
-        $this->resource->settings = $this->settings;
-        $this->resource->save();
+        $this->model->settings = $this->settings;
+        $this->model->save();
 
         return $this;
     }
@@ -122,15 +123,17 @@ class Settings
 
     protected function config($key = null)
     {
-        $config = method_exists($this->resource, 'getSettingsConfig') ?
-                    $this->resource->getSettingsConfig($this->identifier) :
-                    [];
-
-        if (!is_null($key)) {
-            return Arr::get($config, $key);
+        if (is_null($this->config)) {
+            $this->config = method_exists($this->model, 'getSettingsConfig') ?
+                                $this->model->getSettingsConfig() :
+                                [];
         }
 
-        return $config;
+        if (!is_null($key)) {
+            return Arr::get($this->config, $key);
+        }
+
+        return $this->config;
     }
 
     protected function defaults()
